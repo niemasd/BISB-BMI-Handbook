@@ -18,6 +18,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: main.pdf
-          asset_name: main.pdf
+          asset_name: bisb_bmi_handbook.pdf
           tag: ${{ github.ref }}
           overwrite: true

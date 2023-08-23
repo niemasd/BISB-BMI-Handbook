@@ -45,7 +45,10 @@ def write_introduction(f):
     f.write('\\chapter{Introduction}\n')
 
     # mission statement
-    soup = scrape('https://bioinformatics.ucsd.edu/node/1')
+    url = 'https://bioinformatics.ucsd.edu/node/1'
+    f.write('\\section{Mission Statement}\n')
+    f.write("\\textit{Scraped from: \\href{%s}{%s}}\\\\~\\\\\n\n" % (url,url))
+    soup = scrape(url)
     for paragraph in soup.find_all('div', class_='field')[0].find_all('p'):
         f.write('%s\n\n' % clean(paragraph.text))
 

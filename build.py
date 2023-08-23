@@ -13,7 +13,11 @@ def scrape(url):
 
 # clean text for use in LaTeX (e.g. replace "&" with "\&")
 def clean(text):
-    return text.replace('&','\\&')
+    return text.strip().replace('&','\\&')
+
+# write "Scraped From:" text
+def write_scraped_from(f, url):
+    f.write("\\textit{Scraped from: \\href{%s}{%s}}\\\\\n\n" % (url, url))
 
 # write header
 def write_header(f):
@@ -47,10 +51,31 @@ def write_introduction(f):
     # mission statement
     url = 'https://bioinformatics.ucsd.edu/node/1'
     f.write('\\section{Mission Statement}\n')
-    f.write("\\textit{Scraped from: \\href{%s}{%s}}\\\\~\\\\\n\n" % (url,url))
+    write_scraped_from(f, url)
     soup = scrape(url)
     for paragraph in soup.find_all('div', class_='field')[0].find_all('p'):
         f.write('%s\n\n' % clean(paragraph.text))
+
+    # program committees
+    url = 'https://bioinformatics.ucsd.edu/node/3'
+    f.write('\\section{Graduate Program Committees}\n')
+    write_scraped_from(f, url)
+    soup = scrape(url)
+    for committee in soup.find_all('div', class_='cwp-chrome07'):
+        f.write('\\subsection{%s}\n' % clean(committee.find_all('h2')[0].text))
+        paragraphs = committee.find_all('p')
+        if len(paragraphs) != 0:
+            f.write('\\subsubsection*{Duties}\n')
+            f.write('\\begin{itemize}\n')
+            for paragraph in committee.find_all('p'):
+                for line in paragraph.text.splitlines():
+                    f.write('\item %s\n' % clean(line))
+            f.write('\\end{itemize}\n')
+        f.write('\\subsubsection*{Members}\n')
+        f.write('\\begin{itemize}\n\n')
+        for member in committee.find_all('li'):
+            f.write('\item %s\n' % clean(member.text))
+        f.write('\\end{itemize}\n')
 
 # write footer
 def write_footer(f):

@@ -72,10 +72,30 @@ def write_introduction(f):
                     f.write('\item %s\n' % clean(line))
             f.write('\\end{itemize}\n')
         f.write('\\subsubsection*{Members}\n')
-        f.write('\\begin{itemize}\n\n')
+        f.write('\\begin{itemize}\n')
         for member in committee.find_all('li'):
             f.write('\item %s\n' % clean(member.text))
         f.write('\\end{itemize}\n')
+
+# write curriculum
+def write_curriculum(f):
+    f.write('\\chapter{Curriculum}\n')
+
+    # overview
+    url = 'https://bioinformatics.ucsd.edu/curriculum'
+    f.write('\\section{Curriculum Overview}\n')
+    write_scraped_from(f, url)
+    soup = scrape(url)
+    for child in soup.find_all('div', class_='field')[0]:
+        if child.name == 'p':
+            f.write('%s\n\n' % clean(child.text))
+        elif child.name == 'h3':
+            break # stop before "Program Timeline & Sample Schedules"
+        elif child.name == 'ul':
+            f.write('\\begin{itemize}\n')
+            for item in child.find_all('li'):
+                f.write('\item %s\n' % clean(item.text))
+            f.write('\\end{itemize}\n')
 
 # write footer
 def write_footer(f):
@@ -86,5 +106,6 @@ if __name__ == "__main__":
     f = open('main.tex', 'w')
     write_header(f)
     write_introduction(f)
+    write_curriculum(f)
     write_footer(f)
     f.close()

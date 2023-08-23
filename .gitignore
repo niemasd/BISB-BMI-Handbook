@@ -1,3 +1,6 @@
+# ignore built TEX file (user should run the Python script each time)
+*.tex
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof

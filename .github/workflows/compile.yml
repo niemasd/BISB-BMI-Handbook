@@ -18,6 +18,14 @@ jobs:
         uses: xu-cheng/latex-action@v2
         with:
           root_file: main.tex
+      - name: Upload LaTeX source to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: main.tex
+          asset_name: bisb_bmi_handbook.tex
+          tag: ${{ github.ref }}
+          overwrite: true
       - name: Upload compiled PDF to release
         uses: svenstaro/upload-release-action@v2
         with:

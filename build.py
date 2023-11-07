@@ -97,6 +97,18 @@ def write_curriculum(f):
                 f.write('\item %s\n' % clean(item.text))
             f.write('\\end{itemize}\n')
 
+# write policies
+def write_policies(f):
+    f.write('\\chapter{Policies}\n')
+
+    # advisor/student relationship
+    url = 'https://bioinformatics.ucsd.edu/index.php/node/43'
+    f.write('\\section{Advisor/Student Relationship}\n')
+    write_scraped_from(f, url)
+    soup = scrape(url)
+    f.write("TODO\n") # TODO
+    #print(soup); exit() # TODO
+
 # write footer
 def write_footer(f):
     f.write('\\end{document}\n')
@@ -107,5 +119,6 @@ if __name__ == "__main__":
     write_header(f)
     write_introduction(f)
     write_curriculum(f)
+    write_policies(f)
     write_footer(f)
     f.close()

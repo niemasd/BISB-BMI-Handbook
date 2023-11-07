@@ -106,8 +106,11 @@ def write_policies(f):
     f.write('\\section{Advisor/Student Relationship}\n')
     write_scraped_from(f, url)
     soup = scrape(url)
-    f.write("TODO\n") # TODO
-    #print(soup); exit() # TODO
+    for child in soup.find_all('div', class_='field')[0]:
+        if child.name == 'p':
+            f.write('%s\n\n' % clean(child.text))
+        elif child.name == 'h3':
+            f.write('\\subsection{%s}\n' % clean(child.text))
 
 # write footer
 def write_footer(f):

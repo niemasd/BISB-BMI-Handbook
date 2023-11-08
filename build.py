@@ -27,6 +27,7 @@ def clean_soup(item):
     text = text.replace('<ul>','').replace('</ul>','')
     text = text.replace('<em>','\\textit{').replace('</em>','}')
     text = text.replace('<strong>','\\textbf{').replace('</strong>','}')
+    text = text.replace('<b>','\\textbf{').replace('</b>','}')
     text = text.replace('<h2>','\\subsection{').replace('</h2>','}')
     text = text.replace('<h3>','\\subsection{').replace('</h3>','}')
     text = text.replace('<br/><br/>','\n\n')
@@ -48,6 +49,33 @@ def clean_soup(item):
 # write "Scraped From:" text
 def write_scraped_from(f, url):
     f.write("\\textit{Scraped from: \\href{%s}{%s}}\\\\\n\n" % (url, url))
+
+# write a list as \itemize
+def write_list(f, item):
+    f.write('\\begin{itemize}\n')
+    for item in item.find_all('li'):
+        f.write('\item %s\n' % clean_soup(item))
+    f.write('\\end{itemize}\n')
+
+# write a general page (some pages might need manual parsing)
+def write_general_page(f, soup, tag='div', class_='field'):
+    if isinstance(soup, str): # actually a URL, not a soup
+        url = soup; soup = scrape(url); write_scraped_from(f, url)
+    if tag is None:
+        children = list(soup)
+    else:
+        children = soup.find_all(tag, class_=class_)[0]
+    for child in children:
+        if child.name == 'p':
+            f.write('%s\n\n' % clean_soup(child))
+        elif child.name in {'h2', 'h3'}:
+            f.write('\\subsection{%s}\n' % clean(child.text))
+        elif child.name == 'ul':
+            write_list(f, child)
+        elif child.name == 'div':
+            write_general_page(f, child, tag=None, class_=None)
+        elif child.name is not None:
+            raise ValueError("Unsupported HTML tag: %s\n%s" % (child.name, child))
 
 # write header
 def write_header(f):
@@ -91,10 +119,7 @@ def write_about(f):
     url = 'https://bioinformatics.ucsd.edu/node/1'
     f.write('% Mission Statement\n')
     f.write('\\section{Mission Statement}\n')
-    write_scraped_from(f, url)
-    soup = scrape(url)
-    for paragraph in soup.find_all('div', class_='field')[0].find_all('p'):
-        f.write('%s\n\n' % clean_soup(paragraph))
+    write_general_page(f, url)
 
     # Graduate Program Committees
     url = 'https://bioinformatics.ucsd.edu/node/3'
@@ -113,10 +138,7 @@ def write_about(f):
                     f.write('\item %s\n' % clean_soup(line))
             f.write('\\end{itemize}\n')
         f.write('\\subsubsection*{Members}\n')
-        f.write('\\begin{itemize}\n')
-        for member in committee.find_all('li'):
-            f.write('\item %s\n' % clean_soup(member))
-        f.write('\\end{itemize}\n')
+        write_list(f, committee)
     f.write('\n')
 
 # write Curriculum
@@ -128,19 +150,7 @@ def write_curriculum(f):
     url = 'https://bioinformatics.ucsd.edu/curriculum'
     f.write('% Curriculum Overview\n')
     f.write('\\section{Curriculum Overview}\n')
-    write_scraped_from(f, url)
-    soup = scrape(url)
-    for child in soup.find_all('div', class_='field')[0]:
-        if child.name == 'p':
-            f.write('%s\n\n' % clean_soup(child))
-        elif child.name == 'h3':
-            break # stop before "Program Timeline & Sample Schedules"
-        elif child.name == 'ul':
-            f.write('\\begin{itemize}\n')
-            for item in child.find_all('li'):
-                f.write('\item %s\n' % clean_soup(item))
-            f.write('\\end{itemize}\n')
-    f.write('\n')
+    write_general_page(f, url)
 
 # write Requirements
 def write_requirements(f):
@@ -151,51 +161,31 @@ def write_requirements(f):
     url = 'https://bioinformatics.ucsd.edu/node/24'
     f.write('% Seminars, Informal Courses, Group Meetings, Symposia, and Journal Clubs\n')
     f.write('\\section{Seminars, Informal Courses, Group Meetings, Symposia, and Journal Clubs}\n')
-    write_scraped_from(f, url)
-    soup = scrape(url)
-    for paragraph in soup.find_all('div', class_='field')[0].find_all('p'):
-        f.write('%s\n\n' % clean_soup(paragraph))
+    write_general_page(f, url)
 
     # Teaching Requirement
     url = 'https://bioinformatics.ucsd.edu/node/25'
     f.write('% Teaching Requirement\n')
     f.write('\\section{Teaching Requirement}\n')
-    write_scraped_from(f, url)
-    soup = scrape(url)
-    for child in soup.find_all('div', class_='field')[0]:
-        if child.name == 'p':
-            f.write('%s\n\n' % clean_soup(child))
-        elif child.name == 'ul':
-            f.write('\\begin{itemize}\n')
-            for item in child.find_all('li'):
-                f.write('\item %s\n' % clean_soup(item))
-            f.write('\\end{itemize}\n')
+    write_general_page(f, url)
 
     # Qualifying Exam
     url = 'https://bioinformatics.ucsd.edu/node/37'
     f.write('% Qualifying Exam\n')
     f.write('\\section{Qualifying Exam}\n')
-    write_scraped_from(f, url)
-    soup = scrape(url)
-    for child in soup.find_all('div', class_='field')[0]:
-        if child.name == 'p':
-            f.write('%s\n\n' % clean_soup(child))
-        elif child.name == 'ul':
-            f.write('\\begin{itemize}\n')
-            for item in child.find_all('li'):
-                f.write('\item %s\n' % clean_soup(item))
-            f.write('\\end{itemize}\n')
-        elif child.name == 'div':
-            for grandchild in child:
-                if grandchild.name == 'h2':
-                    f.write('\\textbf{%s}\n' % clean(grandchild.text))
-                elif grandchild.name == 'div':
-                    for grandgrandchild in grandchild:
-                        if grandgrandchild.name == 'ul':
-                            f.write('\\begin{itemize}\n')
-                            for item in grandgrandchild.find_all('li'):
-                                f.write('\item %s\n' % clean_soup(item))
-                            f.write('\\end{itemize}\n')
+    write_general_page(f, url)
+
+    # Doctoral Committee
+    url = 'https://bioinformatics.ucsd.edu/node/17757'
+    f.write('% Doctoral Committee\n')
+    f.write('\\section{Doctoral Committee}\n')
+    write_general_page(f, url)
+
+    # Advancement to Ph.D. Candidacy
+    url = 'https://bioinformatics.ucsd.edu/node/39'
+    f.write('% Advancement to Ph.D. Candidacy\n')
+    f.write('\\section{Advancement to Ph.D. Candidacy}\n')
+    write_general_page(f, url)
 
 # write Policies
 def write_policies(f):
@@ -206,13 +196,7 @@ def write_policies(f):
     url = 'https://bioinformatics.ucsd.edu/index.php/node/43'
     f.write('% Advisor/Student Relationship\n')
     f.write('\\section{Advisor/Student Relationship}\n')
-    write_scraped_from(f, url)
-    soup = scrape(url)
-    for child in soup.find_all('div', class_='field')[0]:
-        if child.name == 'p':
-            f.write('%s\n\n' % clean_soup(child))
-        elif child.name == 'h3':
-            f.write('\\subsection{%s}\n' % clean_soup(child.text))
+    write_general_page(f, url)
 
 # write footer
 def write_footer(f):

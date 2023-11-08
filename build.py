@@ -31,6 +31,7 @@ def clean_soup(item):
     text = text.replace('<li>','').replace('</li>','')
     text = text.replace('<ul>','').replace('</ul>','')
     text = text.replace('<em>','\\textit{').replace('</em>','}')
+    text = text.replace('<i>','\\textit{').replace('</i>','}')
     text = text.replace('<strong>','\\textbf{').replace('</strong>','}')
     text = text.replace('<b>','\\textbf{').replace('</b>','}')
     text = text.replace('<h2>','\\subsection{').replace('</h2>','}')
@@ -70,6 +71,22 @@ def write_list(f, item):
         f.write('\item %s\n' % clean_soup(item))
     f.write('\\end{itemize}\n')
 
+# write a table as \tabular
+def write_table(f, item):
+    contents = [[clean_soup(list(cell)[0]) for cell in row.find_all('th')] + [clean_soup(list(cell)[0]) for cell in row.find_all('td')] for row in item.find_all('tr')]
+    num_cols = max(len(row) for row in contents)
+    for i in range(len(contents)):
+        contents[i] += ['']*(num_cols-len(contents[i]))
+    f.write('\\begin{table}[ht]\n')
+    f.write('\\centering\n')
+    f.write('\\begin{adjustbox}{width=\\textwidth}\n')
+    f.write('\\begin{tabular}{ %s }\n' % ' '.join(['l']*num_cols))
+    for row in contents:
+        f.write('%s\\\\\n' % (' & '.join(row)))
+    f.write('\\end{tabular}\n')
+    f.write('\\end{adjustbox}\n')
+    f.write('\\end{table}\n')
+
 # write a general page (some pages might need manual parsing)
 def write_general_page(f, soup, tag='div', class_='field'):
     if isinstance(soup, str): # actually a URL, not a soup
@@ -87,6 +104,8 @@ def write_general_page(f, soup, tag='div', class_='field'):
             write_list(f, child)
         elif child.name == 'div':
             write_general_page(f, child, tag=None, class_=None)
+        elif child.name == 'table':
+            write_table(f, child)
         elif child.name is not None:
             raise ValueError("Unsupported HTML tag: %s\n%s" % (child.name, child))
 
@@ -96,6 +115,7 @@ def write_document_header(f):
 
     # packages
     f.write('% packages\n')
+    f.write('\\usepackage{adjustbox}\n')
     f.write('\\usepackage{hyperref}\n')
     f.write('\\usepackage[pagestyles]{titlesec}\n')
     f.write('\n')
@@ -155,11 +175,19 @@ def write_about(f):
 # write Curriculum
 def write_curriculum(f):
     write_header(f, 'Curriculum', 'chapter')
+    sections = [
+        ('Curriculum Overview', 'https://bioinformatics.ucsd.edu/curriculum'),
+        ('Course Requirements', 'https://bioinformatics.ucsd.edu/node/104'),
+    ]
+    for title, url in sections:
+        write_header(f, title, 'section')
+        write_general_page(f, url)
 
-    # Curriculum Overview
-    write_header(f, 'Curriculum Overview', 'section')
-    url = 'https://bioinformatics.ucsd.edu/curriculum'
-    write_general_page(f, url)
+# write Research Rotations
+def write_rotations(f):
+     write_header(f, 'Research Rotations', 'chapter')
+     url = 'https://bioinformatics.ucsd.edu/node/99'
+     write_general_page(f, url)
 
 # write Requirements
 def write_requirements(f):
@@ -199,6 +227,7 @@ if __name__ == "__main__":
     write_document_header(f)
     write_about(f)
     write_curriculum(f)
+    write_rotations(f)
     write_requirements(f)
     write_policies(f)
     write_footer(f)

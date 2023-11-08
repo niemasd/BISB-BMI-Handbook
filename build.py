@@ -16,7 +16,12 @@ def scrape(url):
 
 # clean text for use in LaTeX (e.g. replace "&" with "\&")
 def clean(text):
-    return text.strip().replace('&','\\&').replace('%', '\\%')
+    text = text.strip()
+    text = text.replace('&', '\\&')
+    text = text.replace('\\&amp;', '\\&')
+    text = text.replace('%', '\\%')
+    text = text.replace('$', '\$')
+    return text
 
 # clean BeautifulSoup item for use in LaTeX
 def clean_soup(item):
@@ -30,6 +35,7 @@ def clean_soup(item):
     text = text.replace('<b>','\\textbf{').replace('</b>','}')
     text = text.replace('<h2>','\\subsection{').replace('</h2>','}')
     text = text.replace('<h3>','\\subsection{').replace('</h3>','}')
+    text = text.replace('<h4>','\\subsubsection{').replace('</h4>','}')
     text = text.replace('<br/><br/>','\n\n')
     text = text.replace('<br/>',' ')
 
@@ -50,6 +56,13 @@ def clean_soup(item):
 def write_scraped_from(f, url):
     f.write("\\textit{Scraped from: \\href{%s}{%s}}\\\\\n\n" % (url, url))
 
+# write chapter/section header
+def write_header(f, title, header_type):
+    if header_type not in {'chapter', 'section'}:
+        raise ValueError("Invalid header type: %s" % header_type)
+    f.write('%% %s\n' % title)
+    f.write('\\%s{%s}\n\n' % (header_type, title))
+
 # write a list as \itemize
 def write_list(f, item):
     f.write('\\begin{itemize}\n')
@@ -66,7 +79,7 @@ def write_general_page(f, soup, tag='div', class_='field'):
     else:
         children = soup.find_all(tag, class_=class_)[0]
     for child in children:
-        if child.name == 'p':
+        if child.name in {'p', 'h4'}:
             f.write('%s\n\n' % clean_soup(child))
         elif child.name in {'h2', 'h3'}:
             f.write('\\subsection{%s}\n' % clean(child.text))
@@ -77,8 +90,8 @@ def write_general_page(f, soup, tag='div', class_='field'):
         elif child.name is not None:
             raise ValueError("Unsupported HTML tag: %s\n%s" % (child.name, child))
 
-# write header
-def write_header(f):
+# write document header
+def write_document_header(f):
     f.write('\\documentclass[12pt,titlepage]{book}\n\n')
 
     # packages
@@ -112,13 +125,11 @@ def write_header(f):
 
 # write About
 def write_about(f):
-    f.write('% Introduction\n')
-    f.write('\\chapter{Introduction}\n\n')
+    write_header(f, 'Introduction', 'chapter')
 
     # Mission Statement
+    write_header(f, 'Mission Statement', 'section')
     url = 'https://bioinformatics.ucsd.edu/node/1'
-    f.write('% Mission Statement\n')
-    f.write('\\section{Mission Statement}\n')
     write_general_page(f, url)
 
     # Graduate Program Committees
@@ -143,60 +154,40 @@ def write_about(f):
 
 # write Curriculum
 def write_curriculum(f):
-    f.write('% Curriculum\n')
-    f.write('\\chapter{Curriculum}\n\n')
+    write_header(f, 'Curriculum', 'chapter')
 
     # Curriculum Overview
+    write_header(f, 'Curriculum Overview', 'section')
     url = 'https://bioinformatics.ucsd.edu/curriculum'
-    f.write('% Curriculum Overview\n')
-    f.write('\\section{Curriculum Overview}\n')
     write_general_page(f, url)
 
 # write Requirements
 def write_requirements(f):
-    f.write('% Requirements\n')
-    f.write('\\chapter{Requirements}\n\n')
-
-    # Seminars, Informal Courses, Group Meetings, Symposia, and Journal Clubs
-    url = 'https://bioinformatics.ucsd.edu/node/24'
-    f.write('% Seminars, Informal Courses, Group Meetings, Symposia, and Journal Clubs\n')
-    f.write('\\section{Seminars, Informal Courses, Group Meetings, Symposia, and Journal Clubs}\n')
-    write_general_page(f, url)
-
-    # Teaching Requirement
-    url = 'https://bioinformatics.ucsd.edu/node/25'
-    f.write('% Teaching Requirement\n')
-    f.write('\\section{Teaching Requirement}\n')
-    write_general_page(f, url)
-
-    # Qualifying Exam
-    url = 'https://bioinformatics.ucsd.edu/node/37'
-    f.write('% Qualifying Exam\n')
-    f.write('\\section{Qualifying Exam}\n')
-    write_general_page(f, url)
-
-    # Doctoral Committee
-    url = 'https://bioinformatics.ucsd.edu/node/17757'
-    f.write('% Doctoral Committee\n')
-    f.write('\\section{Doctoral Committee}\n')
-    write_general_page(f, url)
-
-    # Advancement to Ph.D. Candidacy
-    url = 'https://bioinformatics.ucsd.edu/node/39'
-    f.write('% Advancement to Ph.D. Candidacy\n')
-    f.write('\\section{Advancement to Ph.D. Candidacy}\n')
-    write_general_page(f, url)
+    write_header(f, 'Requirements', 'chapter')
+    sections = [
+        ('Seminars, etc.', 'https://bioinformatics.ucsd.edu/node/24'),
+        ('Teaching Requirement', 'https://bioinformatics.ucsd.edu/node/25'),
+        ('Qualifying Exam', 'https://bioinformatics.ucsd.edu/node/37'),
+        ('Doctoral Committee', 'https://bioinformatics.ucsd.edu/node/17757'),
+        ('Ph.D. Advancement', 'https://bioinformatics.ucsd.edu/node/39'),
+        ('Ph.D. Advancement Instructions', 'https://bioinformatics.ucsd.edu/node/40'),
+        ('Thesis or Dissertation', 'https://bioinformatics.ucsd.edu/node/38'),
+        ('Dissertation Defense', 'https://bioinformatics.ucsd.edu/node/41'),
+        ('Individual Development Plan (IDP)', 'https://bioinformatics.ucsd.edu/node/1086'),
+    ]
+    for title, url in sections:
+        write_header(f, title, 'section')
+        write_general_page(f, url)
 
 # write Policies
 def write_policies(f):
-    f.write('% Policies\n')
-    f.write('\\chapter{Policies}\n\n')
-
-    # Advisor/Student Relationship
-    url = 'https://bioinformatics.ucsd.edu/index.php/node/43'
-    f.write('% Advisor/Student Relationship\n')
-    f.write('\\section{Advisor/Student Relationship}\n')
-    write_general_page(f, url)
+    write_header(f, 'Policies', 'chapter')
+    sections = [
+        ('Advisor/Student Relationship', 'https://bioinformatics.ucsd.edu/index.php/node/43'),
+    ]
+    for title, url in sections:
+        write_header(f, title, 'section')
+        write_general_page(f, url)
 
 # write footer
 def write_footer(f):
@@ -205,7 +196,7 @@ def write_footer(f):
 # main program
 if __name__ == "__main__":
     f = open('main.tex', 'w')
-    write_header(f)
+    write_document_header(f)
     write_about(f)
     write_curriculum(f)
     write_requirements(f)

@@ -24,6 +24,7 @@ def clean_soup(item):
     text = str(item)
     text = text.replace('<p>','').replace('</p>','')
     text = text.replace('<li>','').replace('</li>','')
+    text = text.replace('<ul>','').replace('</ul>','')
     text = text.replace('<em>','\\textit{').replace('</em>','}')
     text = text.replace('<strong>','\\textbf{').replace('</strong>','}')
     text = text.replace('<h2>','\\subsection{').replace('</h2>','}')
@@ -162,13 +163,39 @@ def write_requirements(f):
     write_scraped_from(f, url)
     soup = scrape(url)
     for child in soup.find_all('div', class_='field')[0]:
-        if child.name == 'p': # TODO HANDLE BOLD
+        if child.name == 'p':
             f.write('%s\n\n' % clean_soup(child))
         elif child.name == 'ul':
             f.write('\\begin{itemize}\n')
             for item in child.find_all('li'):
                 f.write('\item %s\n' % clean_soup(item))
             f.write('\\end{itemize}\n')
+
+    # Qualifying Exam
+    url = 'https://bioinformatics.ucsd.edu/node/37'
+    f.write('% Qualifying Exam\n')
+    f.write('\\section{Qualifying Exam}\n')
+    write_scraped_from(f, url)
+    soup = scrape(url)
+    for child in soup.find_all('div', class_='field')[0]:
+        if child.name == 'p':
+            f.write('%s\n\n' % clean_soup(child))
+        elif child.name == 'ul':
+            f.write('\\begin{itemize}\n')
+            for item in child.find_all('li'):
+                f.write('\item %s\n' % clean_soup(item))
+            f.write('\\end{itemize}\n')
+        elif child.name == 'div':
+            for grandchild in child:
+                if grandchild.name == 'h2':
+                    f.write('\\textbf{%s}\n' % clean(grandchild.text))
+                elif grandchild.name == 'div':
+                    for grandgrandchild in grandchild:
+                        if grandgrandchild.name == 'ul':
+                            f.write('\\begin{itemize}\n')
+                            for item in grandgrandchild.find_all('li'):
+                                f.write('\item %s\n' % clean_soup(item))
+                            f.write('\\end{itemize}\n')
 
 # write Policies
 def write_policies(f):

@@ -159,6 +159,11 @@ def write_about(f):
     url = 'https://bioinformatics.ucsd.edu/node/1'
     write_general_page(f, url)
 
+    # Graduate Financial Support
+    write_header(f, 'Graduate Financial Support', 'section')
+    url = 'https://bioinformatics.ucsd.edu/node/18'
+    write_general_page(f, url)
+
     # Graduate Program Committees
     url = 'https://bioinformatics.ucsd.edu/node/3'
     f.write('% Graduate Program Committees\n')

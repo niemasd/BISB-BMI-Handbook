@@ -21,6 +21,8 @@ def clean(text):
     text = text.replace('\\&amp;', '\\&')
     text = text.replace('%', '\\%')
     text = text.replace('$', '\$')
+    text = text.replace('[', '{[')
+    text = text.replace(']', ']}')
     return text
 
 # clean BeautifulSoup item for use in LaTeX
@@ -106,6 +108,10 @@ def write_general_page(f, soup, tag='div', class_='field'):
             write_general_page(f, child, tag=None, class_=None)
         elif child.name == 'table':
             write_table(f, child)
+        elif child.name == 'blockquote':
+            f.write('\\begin{displayquote}\n')
+            write_general_page(f, child, tag=None, class_=None)
+            f.write('\\end{displayquote}\n')
         elif child.name is not None:
             raise ValueError("Unsupported HTML tag: %s\n%s" % (child.name, child))
 
@@ -116,6 +122,7 @@ def write_document_header(f):
     # packages
     f.write('% packages\n')
     f.write('\\usepackage{adjustbox}\n')
+    f.write('\\usepackage{csquotes}\n')
     f.write('\\usepackage{hyperref}\n')
     f.write('\\usepackage[pagestyles]{titlesec}\n')
     f.write('\n')
@@ -212,6 +219,11 @@ def write_policies(f):
     write_header(f, 'Policies', 'chapter')
     sections = [
         ('Advisor/Student Relationship', 'https://bioinformatics.ucsd.edu/index.php/node/43'),
+        ('Internships', 'https://bioinformatics.ucsd.edu/node/186'),
+        ('How to Cite Training Grant', 'https://bioinformatics.ucsd.edu/node/1023'),
+        ('Curriculum Petitions FAQ', 'https://bioinformatics.ucsd.edu/node/1034'),
+        ('Grades FAQ', 'https://bioinformatics.ucsd.edu/node/1085'),
+        ('Exam Scheduling FAQ', 'https://bioinformatics.ucsd.edu/node/1035'),
     ]
     for title, url in sections:
         write_header(f, title, 'section')

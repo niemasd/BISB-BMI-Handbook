@@ -16,6 +16,7 @@ def scrape(url):
 
 # clean text for use in LaTeX (e.g. replace "&" with "\&")
 def clean(text):
+    text = ''.join([i if ord(i) < 128 else ' ' for i in text])
     text = text.strip()
     text = text.replace('&', '\\&')
     text = text.replace('\\&amp;', '\\&')
@@ -27,7 +28,7 @@ def clean(text):
 
 # clean BeautifulSoup item for use in LaTeX
 def clean_soup(item):
-    # remove attributes from 'a href'
+    # remove attributes from certain tags
     to_explore = [item]
     while len(to_explore) != 0:
         curr = to_explore.pop()
@@ -35,11 +36,15 @@ def clean_soup(item):
             if curr.name == 'a':
                 if hasattr(curr, 'attrs') and 'href' in curr.attrs:
                     curr.attrs = {'href':curr.attrs['href']}
-            else:
-                to_explore += list(curr)
+                else:
+                    curr.attrs = dict()
+            elif curr.name in {'em', 'strong', 'li', 'ol', 'ul'}:
+                curr.attrs = dict()
+            to_explore += list(curr)
 
     # clean up most HTML tags
     text = str(item)
+    text = text.replace('<a></a>','')
     text = text.replace('<p>','').replace('</p>','')
     text = text.replace('<li>','').replace('</li>','')
     text = text.replace('<ul>','').replace('</ul>','')
@@ -47,9 +52,11 @@ def clean_soup(item):
     text = text.replace('<i>','\\textit{').replace('</i>','}')
     text = text.replace('<strong>','\\textbf{').replace('</strong>','}')
     text = text.replace('<b>','\\textbf{').replace('</b>','}')
+    text = text.replace('<sup>','\\textsuperscript{').replace('</sup>','}')
     text = text.replace('<h2>','\\subsection{').replace('</h2>','}')
     text = text.replace('<h3>','\\subsection{').replace('</h3>','}')
     text = text.replace('<h4>','\\subsubsection{').replace('</h4>','}')
+    text = text.replace('<font color="red">','{\\color{red}').replace('</font>','}')
     text = text.replace('<br/><br/>','\n\n')
     text = text.replace('<br/>',' ')
 
@@ -101,7 +108,7 @@ def write_table(f, item):
     f.write('\\end{table}\n')
 
 # write a general page (some pages might need manual parsing)
-def write_general_page(f, soup, tag='div', class_='field'):
+def write_general_page(f, soup, tag='div', class_='content'):
     if isinstance(soup, str): # actually a URL, not a soup
         url = soup; soup = scrape(url); write_scraped_from(f, url)
     if tag is None:
@@ -116,13 +123,24 @@ def write_general_page(f, soup, tag='div', class_='field'):
         elif child.name == 'ul':
             write_list(f, child)
         elif child.name == 'div':
-            write_general_page(f, child, tag=None, class_=None)
+            if 'id' in child.attrs and 'accordion' in child.attrs['id']:
+                curr = child.find_all('div', class_='card panel panel-default')[0]
+                entries = [tmp for tmp in curr if hasattr(tmp, 'name') and tmp.name == 'div']
+                for i in range(0, len(entries), 2):
+                    f.write('\\subsubsection{%s}\n' % clean(entries[i].text))
+                    write_general_page(f, entries[i+1], tag=None, class_=None)
+            else:
+                write_general_page(f, child, tag=None, class_=None)
         elif child.name == 'table':
             write_table(f, child)
+        elif child.name in {'center'}:
+            write_general_page(f, child, tag=None, class_=None)
         elif child.name == 'blockquote':
             f.write('\\begin{displayquote}\n')
             write_general_page(f, child, tag=None, class_=None)
             f.write('\\end{displayquote}\n')
+        elif child.name in {'button'}:
+            continue # skip these
         elif child.name is not None:
             raise ValueError("Unsupported HTML tag: %s\n%s" % (child.name, child))
 
@@ -136,6 +154,7 @@ def write_document_header(f):
     f.write('\\usepackage{csquotes}\n')
     f.write('\\usepackage{hyperref}\n')
     f.write('\\usepackage[pagestyles]{titlesec}\n')
+    f.write('\\usepackage{xcolor}\n')
     f.write('\n')
 
     # title page properties

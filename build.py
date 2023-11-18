@@ -27,6 +27,17 @@ def clean(text):
 
 # clean BeautifulSoup item for use in LaTeX
 def clean_soup(item):
+    # remove attributes from 'a href'
+    to_explore = [item]
+    while len(to_explore) != 0:
+        curr = to_explore.pop()
+        if hasattr(curr, 'name'):
+            if curr.name == 'a':
+                if hasattr(curr, 'attrs') and 'href' in curr.attrs:
+                    curr.attrs = {'href':curr.attrs['href']}
+            else:
+                to_explore += list(curr)
+
     # clean up most HTML tags
     text = str(item)
     text = text.replace('<p>','').replace('</p>','')
